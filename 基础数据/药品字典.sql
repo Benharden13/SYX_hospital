@@ -142,3 +142,60 @@ from tbWM wm
        using.MedicineUsingMethodID != '-1'
   left join tbAssort sort on sort.SourceID = wm.WMID and AssortType = '1803' --化疗标志,1803是化疗西药目录
 where wm.IdleFlag = '0' and wm.WMID != '27716'
+
+
+---成药
+--成药字典
+select
+  pcm.pcmid             old_id,
+  pcmno                 code,
+  pcmname               name,
+  pcmspec               spec,
+  spellcode             spcode,
+  wbcode                d_code,
+  pcmdosage             vol,
+  pcmdosageunit         pk_unit_vol,
+  pcmunit               pk_unit_min,
+  packageunit           pk_unit_pack,
+  case when dosetypeflag = 2
+    then '0'
+  when dosetypeflag = 3
+    then '152'
+  else dosetypeflag end dt_dosage,
+  --0-口服,1-针剂,2-外用,3-颗粒,
+  integratingtypeflag,
+  specialcontrolflag    dt_anti,
+  specialcontrolflag    dt_pois,
+  transrate             pack_size,
+  producerid            pk_factory,
+  providerid            providerid,
+  authorizeno           appr_no,
+  storequalification    dt_storetype,
+  --@存储要求
+  null     price,
+  '1'                   eu_drugtype,
+  case when detail.nationalitybasemedicineflag = '0'
+    then '00'
+  when detail.nationalitybasemedicineflag = '1'
+    then '01'
+  when detail.nationalitybasemedicineflag = '2'
+    then '02' end       dt_base,
+  pcm.pcmdescription    note,
+    pcm.DefaultDosagePerTime                                          dosage_def,
+  --默认用量
+  usingst.MedicineUsingMethodID                                      code_supply,
+  --默认用法,这里使用ID是因为在导入用法字典时,是将ID导入到code中
+  usingst.TakingMedicineTimeID                                       code_freq,PCMLimitTotalDosage quota_dos,
+  '14'                                                            dt_chcate,
+  --病案分类,西药写死
+  '4DC8445B90B34EB5A96C65DD450CF9BF'                               pk_itemcate,
+  ---收费分类,西药写死
+  'NHIS12345NEW1001ZZ1000000000SAK2'                               pk_ordtype, AddMultiRatio pap_rate
+from tbpcm pcm
+  inner join tbpcmdetail detail on pcm.pcmid = detail.pcmid
+  left join tbmedicinedefaultusingmethod usingst
+    on usingst.medicineid = pcm.pcmid and medicinetypeflag = 2 and pcm.idleflag = 0
+    and (MedicineDefaultUsingMethodID !='1726' and MedicineDefaultUsingMethodID !='1857' and MedicineDefaultUsingMethodID !='2113')
+      --因为旧系统默认用法这3个id维护重复,所以此处过滤
+       and usingst.takingmedicinetimeid != '-1' and usingst.medicineusingmethodid != '-1'
+where pcm.idleflag = 0 and pcm.pcmid != -1
