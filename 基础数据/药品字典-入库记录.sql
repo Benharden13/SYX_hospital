@@ -1,8 +1,9 @@
-insert into PD_ST_DETAIL
+--insert into PD_ST_DETAIL
 select
 	replace(sys_guid(), '-', '') PK_PDSTDT,
 	'a41476368e2943f48c32d0cb1179dab8' PK_ORG,
-	'c297d7486f0f47ef88af0db651a0591b' PK_PDST,
+	'a85ef98483a742acb4de1924c146c93b' PK_PDST,
+	--该主键是申请单的
 	ROWNUM+3 SORT_NO,  ----
 	PK_PD,
 	PK_UNIT_PACK,
@@ -41,7 +42,10 @@ select
 	null FLAG_CG,
 	null PK_CG,
 	null PK_PV from (
-  SELECT store.PK_PD,PK_UNIT PK_UNIT_PACK,PRICE price,pd.PACK_SIZE pdpacksize,store.PACK_SIZE FROM BD_PD_STORE store
+  SELECT store.PK_PD,PK_UNIT PK_UNIT_PACK,PRICE price,pd.PACK_SIZE pdpacksize,store.PACK_SIZE,NAME,store.DEL_FLAG FROM BD_PD_STORE store
   INNER JOIN BD_PD pd on pd.PK_PD = store.PK_PD
-  WHERE PK_DEPT = '44f12ecb5d9c4b3cbf21e911476f4c4b' and store.FLAG_STOP <> 1
-and not exists(SELECT * from PD_STOCK stock where PK_DEPT = '44f12ecb5d9c4b3cbf21e911476f4c4b' and store.PK_PD = stock.PK_PD))
+  WHERE PK_DEPT = '3E6F13C8B5F44204B852C83928A51307' and store.FLAG_STOP <> 1
+  --仓库科室的主键
+  and NAME not LIKE '%(自%' AND NAME not LIKE '%（自%' and NAME not LIKE '%氯化钠注射液%' and NAME not LIKE '%葡萄糖%'
+  --过滤掉自备药,还有基数药
+and not exists(SELECT * from PD_STOCK stock where PK_DEPT = '3E6F13C8B5F44204B852C83928A51307' and store.PK_PD = stock.PK_PD));
