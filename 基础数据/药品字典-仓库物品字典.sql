@@ -75,6 +75,17 @@ SELECT PK_PD,code,name,SPEC,OLD_YB_ID,OLD_ID,OLD_CODE,DEL_FLAG,FLAG_STOP,PRICE,C
 
 
 
+
+--仓库库存物品表
+SELECT PK_DEPT,astore.* from A_BD_PD_STORE astore
+  INNER JOIN BD_OU_DEPT adept on adept.OLD_ID = DEPARTMENTID
+  --INNER JOIN
+where DEPARTMENTID in ('2051','2579','2062','2485') --这些是所有药房的id '南院西药库','南院化学试剂库','南院中药库','科研麻精药品库',
+      and USINGSCOPEFLAG <> 0;
+
+SELECT * from BD_PD where CODE = '000491' or code = '06214'--24853
+SELECT * from A_BD_PD_STORE where WMNO = '06214'
+
 -------------------------------------------------------------------------------------------------------------------------------
 ---获取旧系统仓库物品的数据
 SELECT
