@@ -1,0 +1,180 @@
+						192.168.90.226 		export ORACLE_HOME=/home/app/12.2/grid
+
+1£©oracleµÄÊµÀýÃû£ºorcl
+2£©oracleµÄ¹ÜÀíÔ±ÓÃ»§ÃûºÍÃÜÂë£ºsystem/oracle
+3£©ÔÚ¿ØÖÆÌ¨ÒÔ¹ÜÀíÔ±È¨ÏÞµÇÂ¼½¨Á¢Á¬½Ó:
+	sqlplus sys/ora-01555@192.168.8.178:1521/orcl as sysdba;
+	sqlplus nhis/nhis@192.168.8.178:1521/orcl as sysdba;
+	conn /as sysdba;
+	
+	
+	
+
+4£©´´½¨±í¿Õ¼äºÍÓÃ»§
+   --±í¿Õ¼äÊÇÊý¾Ý¿âµÄÂß¼­»®·Ö£¬Ò»¸ö±í¿Õ¼äÖ»ÄÜÊôÓÚÒ»¸öÊý¾Ý¿â¡£ËùÓÐµÄÊý¾Ý¿â¶ÔÏó¶¼´æ·ÅÔÚÖ¸¶¨µÄ±í¿Õ¼äÖÐ¡£µ«Ö÷Òª´æ·ÅµÄÊÇ±í£¬ËùÒÔ³Æ×÷±í¿Õ¼ä¡£
+   OracleÁÙÊ±±í¿Õ¼äÖ÷ÒªÓÃÀ´×ö²éÑ¯ºÍ´æ·ÅÒ»Ð©»º³åÇøÊý¾Ý¡£ÁÙÊ±±í¿Õ¼ä£¬¿É×Ô¶¯ÊÍ·Å£»
+   ¶ø±í¿Õ¼äÖÐ´æ´¢±íÊý¾Ý¡¢º¯Êý¡¢¹ý³Ì¡¢ÐòÁÐµÈ¡£ÊÇËæÊý¾Ý¿âÓÀ¾Ã´æÔÚµÄ¡£
+	/*·ÖÎªËÄ²½ */
+	/*µÚ1²½£º´´½¨ÁÙÊ±±í¿Õ¼ä  */
+	create temporary tablespace nhiszsey_temp  
+	tempfile '/home/app/oracle/oradata\nhis_temp.dbf' 
+	size 50m  
+	autoextend on  
+	next 50m maxsize 5120m   
+	extent management local;  
+	 
+	/*µÚ2²½£º´´½¨Êý¾Ý±í¿Õ¼ä  */
+	create tablespace NHIS_DATA  
+	logging  
+	datafile '/home/app/oracle/oradata/NHIS_DATA.dbf' 
+	size 5000m  
+	autoextend on  
+	next 1000m maxsize unlimited  
+	extent management local;  
+	
+	create tablespace NHIS_DATA  
+	logging  
+	datafile 'C:\database\oracle\Administrator\oradata\orcl\NHIS_DATA.dbf' 
+	size 5000m  
+	autoextend on  
+	next 1000m maxsize unlimited  
+	extent management local;  
+	
+	
+	--asm´´½¨±í¿Õ¼ä
+	users.260.994332439
+	create tablespace NHIS_DATA  
+	logging  
+	datafile '+DATADG/ORCL/DATAFILE/NHIS_DATA.dbf' 
+	size 5000m  
+	autoextend on  
+	next 1000m maxsize unlimited  
+	extent management local;  
+	
+	
+	/*µÚ3²½£º´´½¨ÓÃ»§²¢Ö¸¶¨±í¿Õ¼ä  */
+	create user nhis identified by nhis
+	default tablespace NHIS_DATA  
+	temporary tablespace NHIS_TEMP;  
+	 
+	create user nhis_cs identified by nhis_cs
+	default tablespace NHIS_DATA  
+	/*µÚ4²½£º¸øÓÃ»§ÊÚÓèÈ¨ÏÞ  */
+	grant connect,resource,dba to nhis;
+	grant read,write on directory DUMPDIR to system;
+	
+	sqlplus nhis/nhis@orcl as sysdba
+	select * from dba_tablespaces
+	//²é¿´systemÓÃ»§µÄÄ¬ÈÏ±í¿Õ¼äºÍÁÙÊ±±í¿Õ¼ä£º
+	select DEFAULT_TABLESPACE,TEMPORARY_TABLESPACE from dba_users where username='NHIS
+
+5£©impµ¼ÈëºÍexpµ¼³ö
+¡¾ÍêÈ«Ä£Ê½¡¿exp Êý¾Ý¿âÓÃ»§Ãû/Êý¾Ý¿âÓÃ»§ÃÜÂë@ÊµÀýÃû file=C:\xxx.dmp full=y log=C:\daochu.txt
+¡¾ÍêÈ«Ä£Ê½¡¿imp Êý¾Ý¿âÓÃ»§Ãû/Êý¾Ý¿âÓÃ»§ÃÜÂë@ÊµÀýÃû file=C:\xxx.dmp full=y log=C:\daoru.txt
+
+¡¾ÓÃ»§Ä£Ê½¡¿exp Êý¾Ý¿âÓÃ»§Ãû/Êý¾Ý¿âÓÃ»§ÃÜÂë@ÊµÀýÃû file=C:\xxx.dmp owner=nhis_lb log=C:\daochu.txt
+¡¾ÓÃ»§Ä£Ê½¡¿imp Êý¾Ý¿âÓÃ»§Ãû/Êý¾Ý¿âÓÃ»§ÃÜÂë@ÊµÀýÃû file=C:\xxx.dmp fromuser=nhis_lb touser=xxx log=C:\daoru.txt
+
+¡¾±íÄ£Ê½¡¿  exp Êý¾Ý¿âÓÃ»§Ãû/Êý¾Ý¿âÓÃ»§ÃÜÂë@ÊµÀýÃû file=C:\xxx.dmp owner=nhis_lb tables=(xx) log=C:\daochu.txt
+¡¾±íÄ£Ê½¡¿  imp Êý¾Ý¿âÓÃ»§Ãû/Êý¾Ý¿âÓÃ»§ÃÜÂë@ÊµÀýÃû file=C:\xxx.dmp owner=nhis_lb tables=(xx) log=C:\daoru.txt
+
+¡¾×¢Òâ¡¿impºÍexpÅä¶ÔÊ¹ÓÃ£¬expµ¼³öµÄdmpÎÄ¼þÖ»ÄÜÊ¹ÓÃimpÃüÁîµ¼Èë£»
+	impµ¼Èë±ØÐëÏÈÈ·±£±í¿Õ¼äºÍÔ´±í¿Õ¼äÒ»ÖÂ£¬²»È»µ¼Èë¹ý³ÌÖÐ»á±¨´í£¬Ò»°ãÇé¿öÏÂÔÚÀÏ¿âÉÏ¿ÉÒÔ¿´µ½Ô´±í¿Õ¼ä£¬µ«ÊÇÈç¹ûÏÖÔÚ
+	Ö»ÓÐÒ»¸ödmpÎÄ¼þ£¬²»ÖªµÀÀïÃæµÄ±í¿Õ¼äÊÇÊ²Ã´£¬ÔõÃ´°ìÄØ¡£ÕâÀïÓÐÒ»¸ö¼òµ¥µÄ·½·¨À´»ñÈ¡Ïà¹ØµÄÐÅÏ¢¡£¾ÍÊÇÔÚÐÂ¿âÉÏËæ±ãÕÒ
+	Ò»¸ö¹ÜÀíÔ±ÕË»§À´Ö´ÐÐimpÃüÁîµ¼ÈëdmpÎÄ¼þ¡£µ«ÊÇÓÉÓÚOWNER²»ÕýÈ·£¬»áµ¼ÖÂµ¼ÈëµÄ±íºÍÊý¾Ý»áÌø¹ý£¬²¢²»»áÕæÕýµÄµ¼Èë¡£
+	µ«ÊÇÕâÑù»áÉú³ÉlogÎÄ¼þ¡£´ÓlogÎÄ¼þÖÐ¾Í¿ÉÒÔ²é¿´³ö±í¿Õ¼äµÈÐÅÏ¢¡£ÀýÈç£º
+	imp userid=system/oracle file=C:\xxx.dmp full=y ignore=y show=y log=C:\daoru.txt
+¡¾ÆäËû²ÎÊý¡¿£º
+ignore=y
+full=y 
+fromuser=user1 touser=user2
+	
+
+Àý×Ó£º
+exp tianzhi_smart/tianzhi_smart@192.168.56.60:1521/orcl file='E:\tianzhi_smart.dmp' log=C:\daochu.txt
+exp nhis_lb/nhis_lb@orcl file=C:\nhis_20180625.dmp owner=nhis_lb log=C:\daochu.txt
+imp nhis_bl/nhis_bl@orcl file=D:\backup\nhis_gz1218.dmp full=y log=C:\daoru.txt
+imp nhis_bl/nhis_bl@orcl file=C:\nhis.dmp fromuser=nhis_lb touser=nhis_lb log=C:\daoru.txt
+imp nhis_bl/nhis_bl@orcl file=?D:\backup\nhis_gz1218.dmp  full=y log==D:\backup\daochu.txt
+
+6£©expdpµ¼³öºÍimpdpµ¼Èë
+¡¾ expdpµ¼³ö¡¿  expdp Êý¾Ý¿âÓÃ»§Ãû/Êý¾Ý¿âÓÃ»§ÃÜÂë@ÊµÀýÃû directory=nhis dumpfile=xx.dmp schemas=ÓÃ»§Ãû logfile=test_expdp_bak.log
+				expdp nhis_cs/nhis_cs@orcl directory=nhis dumpfile=cs20181009.dmp schemas=nhis_cs logfile=test_expdp_bak1009.log
+				expdp nhis/nhis@orcl directory=nhis dumpfile=NHIS20190107224808.dmp schemas=nhis_cs logfile=test_expdp_bak1025.log
+¡¾  ²éÑ¯Ä¿Â¼¡¿  select * from dba_directories
+¡¾²éÑ¯±í¿Õ¼ä¡¿  select * from dba_tablespaces
+¡¾ impdpµ¼Èë¡¿  impdp Êý¾Ý¿âÓÃ»§Ãû/Êý¾Ý¿âÓÃ»§ÃÜÂë@ÊµÀýÃû directory=nhis dumpfile=xx.dmp remap_tablespace=Ô´±í¿Õ¼äÃû:ÐÂ±í¿Õ¼äÃû remap_schema=Ô´ÓÃ»§Ãû:ÐÂÓÃ»§Ãû table_exists_action=replace
+±¸×¢£ºimpdpµ¼ÈëÊ±ÐÂÓÃ»§ÃûºÍÐÂ±í¿Õ¼ä¿ÉÒÔ²»´æÔÚ£¬µ¼ÈëÓï¾ä»á×ÔÐÐ´´½¨ 
+
+¡¾Àý×Ó¡¿
+CREATE DIRECTORY nhis as 'C:\database\oracle\Administrator\oradata\direct'; 
+CREATE DIRECTORY DATAFILE as '/home/oracle/dbbak/data';  
+
+
+expdp nhis/nhis@ZB directory=nhis dumpfile=xx.dmp logfile=test_expdp_bak.log schemas=nhis
+
+
+impdp nhis/nhis@orcl directory=nhis dumpfile=NHIS20190327025901.dmp remap_tablespace=NHIS_DATA:NHIS_DATA remap_schema=nhis:nhis table_exists_action=replace 
+impdp zsey/zsey@orcl directory=dmpdata dumpfile=NHIS_223_20180713.dmp remap_tablespace=NHIS_DATA:NHISZSEY_DATA remap_schema=nhis:zsey table_exists_action=replace
+impdp zsey/zsey@orcl directory=dmpdata dumpfile=NHIS_223_20180713.dmp remap_tablespace=NHIS_DATA:NHISZSEY_DATA remap_schema=nhis:zsey table_exists_action=replace
+
+impdp nhis_cs/nhis_cs@orcl directory=DATAFILE dumpfile=NHIS.dmp remap_tablespace=NHIS_DATA:NHIS_DATA remap_schema=nhis:nhis_cs table_exists_action=replace
+impdp nhis/nhis@127.0.0.1:1521/orcl directory=nhis dumpfile=NHIS20190123100243.dmp remap_tablespace=NHIS_DATA:NHIS_DATA remap_schema=nhis:nhis table_exists_action=replace
+impdp nhis_cs/nhis_cs@192.168.8.178:1521/orcl directory=DIRECTORY dumpfile=nhis20181217.dmp remap_tablespace=NHIS_DATA:NHIS_DATA remap_schema=nhis:nhis_cs table_exists_action=replace
+
+--´´½¨Ä¿Â¼
+create directory DIRECTORY as '/home/app/oracle/directory';
+--µ¼ÈëÊý¾Ý¿â,oracle,rac»·¾³ÏÂÊ¹ÓÃ
+//exp nhis_lb/nhis_lb@orcl file=C:\nhis_20180625.dmp owner=nhis_lb log=C:\daochu.txt
+expdp nhis/nhis@192.168.8.178:1521/orcl directory=DIRECTORY dumpfile=NHIS20181226.dmp logfile=NHIS20181226.log schemas=nhis
+
+expdp nhis/nhis@192.168.8.178:1521/orcl directory=DIRECTORY dumpfile=NHIS201812261435_1.dmp logfile=NHIS201812261435.log schemas=nhis version=11.2.0.1.0
+
+
+impdp nhis_cs/nhis_cs@192.168.8.189:1521/orcl directory=DIRECTORY dumpfile=NHIS20181217.DMP remap_tablespace=NHIS_DATA:NHIS_DATA remap_schema=nhis:nhis_cs table_exists_action=replace
+impdp nhis/nhis@192.168.8.189:1521/orcl directory=directory dumpfile=CS20181208.dmp remap_tablespace=NHIS_DATA:NHIS_DATA remap_schema=nhis_cs:nhis table_exists_action=replace;
+impdp nhis/nhis@192.168.8.189:1521/orcl directory=directory dumpfile=CS20181208.dmp remap_tablespace=NHIS_DATA:NHIS_DATA remap_schema=nhis_cs:nhis table_exists_action=replace;
+
+
+
+7£©µ¼ÈëÊý¾Ý¿âÊ±·¢Éú´íÎóÊý¾Ý²»È«ÔõÃ´´¦Àí£¿
+  --> É¾³ýÊý¾Ý¿â£¨ÏÈÉ¾³ýÓÃ»§¡¢ÓÃ»§ËùÔÚ±í¿Õ¼ä£©£¬ÔÙÐÂ½¨ÓÃ»§ºÍ±í¿Õ¼ä£¬ÔÙimpµ¼Èë
+
+	/*µÚ1²½£ºÔÚ¿ØÖÆÌ¨ÒÔ¹ÜÀíÔ±È¨ÏÞµÇÂ¼½¨Á¢Á¬½Ó:  */
+	sqlplus system/oracle@192.168.90.226:1521/orcl
+	conn /as sysdba;
+
+	/*µÚ2²½£ºÓÃsysdbaÓÃ»§²éÑ¯±í¿Õ¼äÃû³Æ¡¢´ÅÅÌÂ·¾¶ÎÄ¼þ  */
+	select username,default_tablespace from dba_users; (ÈçÓÃtestuserµÇÂ¼£¬Ôò²é±íuser_users)
+	select file_name,tablespace_name from dba_data_files; 	
+	
+
+	/*µÚ3²½£ºÉ¾³ýÓÃ»§£¨Èç¹ûÓÃ»§ÏÂÃæÓÐ¶ÔÏó£¬ÐèÒª¼Ócascade²ÎÊý£©  */
+	drop user nhis_gz cascade; 
+	drop user nhis_cs cascade; 
+
+	/*µÚ4²½£ºÉ¾³ý±í¿Õ¼ä  */
+	--½«Æäoffline
+	alter tablespace NHIS_DATA offline;
+	--½«´ÅÅÌÉÏµÄÊý¾ÝÎÄ¼þÒ»Í¬É¾³ý
+	drop tablespace nhis_temp including contents and datafiles CASCADE CONSTRAINTS;  
+	drop tablespace NHIS_DATA including contents and datafiles CASCADE CONSTRAINTS;
+
+	/*µÚ5²½£º´´½¨±í¿Õ¼äºÍÓÃ»§  */
+	/*µÚ6²½£ºÖØÐÂimp  */
+
+7£©µ¼ÈëÊ±³öÏÖÎÊÌâºÍ½â¾ö
+IMP-00041: ¾¯¸æ: ´´½¨µÄ¶ÔÏó´øÓÐ±àÒë¾¯¸æ
+
+--É¾³ýµ±Ç°Á¬½ÓÓÃ»§µÄ»á»°
+select username,sid,serial# from v$session;
+alter system kill session'224,24096';
+        
+
+---178ÉÏµ¼³öÊý¾Ý¿â
+\
+source ~/.bash_profile
+expdp nhis/nhis@192.168.8.178:1521/orcl directory=DATAFILE dumpfile=NHIS20181230.dmp logfile=NHIS20181230.log schemas=nhis
+
+
+
