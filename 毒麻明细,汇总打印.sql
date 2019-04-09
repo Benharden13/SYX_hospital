@@ -58,8 +58,11 @@ select cg.date_cg,
        QUAN quan,
        unit.name unit,
        cg.batch_no,  --空瓶批号
-       cg.name_emp_app,PK_CGIP_BACK,cg.PK_CGIP,
-             apply.date_ap,   --请领时间 case when eu_print = '0' then fasle else true end  --打印标志
+       cg.name_emp_app
+             apply.date_ap,   --请领时间
+          CASE WHEN eu_print = '0'
+    THEN 0
+  ELSE 1 END eu_print --打印标志
   from EX_PD_APPLY apply
   INNER JOIN EX_PD_APPLY_DETAIL detail on detail.PK_PDAP = apply.PK_PDAP
   INNER JOIN BL_IP_DT cg on cg.PK_PDSTDT = detail.PK_PDAPDT

@@ -1,8 +1,8 @@
 --------------------------
 --旧系统的数据,标本数据
-tbExamineExemplar：检验标本
+/*tbExamineExemplar：检验标本
 tbAdditionalCorresponding：附加对应关系
-tbMaterial：材料 因为标本有附加材料项目
+tbMaterial：材料 因为标本有附加材料项目*/
 
 --该sql关联了附加收费项目,所以如果要获取标本字典,使用DISTINCT ExamineExemplarID,ExemplarNo,exemplar.Description 即可
 SELECT ExamineExemplarID,ExemplarNo,exemplar.Description,exemplar.MnemonicCode,'6-'+cast(item.ItemID as varchar(10)) YB_ID,item.UnitPrice '1' quan from tbExamineExemplar exemplar
