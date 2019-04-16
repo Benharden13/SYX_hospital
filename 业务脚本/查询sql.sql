@@ -1,0 +1,63 @@
+--查询药品在仓库中的状态
+SELECT pd.CODE,pd.NAME,OLD_YB_ID,OLD_CODE,con.PK_PDCONVERT,con.PACK_SIZE,unitcon.NAME,store.NAME,pdstore.PACK_SIZE,unitpdstore.NAME from BD_PD pd
+  INNER JOIN BD_PD_CONVERT con on con.PK_PD = pd.PK_PD
+  INNER JOIN BD_UNIT unitcon on unitcon.PK_UNIT = con.PK_UNIT
+  INNER JOIN BD_PD_STORE pdstore on pdstore.PK_PD = pd.PK_PD
+  INNER JOIN BD_STORE store on store.PK_STORE = pdstore.PK_STORE
+  INNER JOIN BD_UNIT unitpdstore on unitpdstore.PK_UNIT = pdstore.PK_UNIT
+where pd.CODE = ''
+
+
+--查询发药单
+SELECT DE.DATE_DE,
+  NAME_DECATE,
+  NAME,
+  CODE_DE,DE.EU_DIRECT,PK_PDDE,DE.PK_PDAPDT,PK_PDSTDT,DE.PK_CNORD,DE.PK_PD,DE.PK_PV,DE.PACK_SIZE,DE.QUAN_PACK,DE.QUAN_PACK,DE.PRICE_COST,DE.AMOUNT,DE.PK_DEPT_DE,NAME_EMP_DE,FLAG_PRT,DE.FLAG_PIVAS,apply.CODE_APPLY
+FROM
+  EX_PD_DE DE --发药单
+  INNER JOIN BD_PD pd ON pd.PK_PD = DE.PK_PD
+  INNER JOIN EX_PD_APPLY_DETAIL apdetail on apdetail.PK_PDAPDT = DE.PK_PDAPDT
+  INNER JOIN EX_PD_APPLY apply on apply.PK_PDAP = apdetail.PK_PDAP
+  INNER JOIN  PV_ENCOUNTER pv on pv.PK_PV = DE.PK_PV
+WHERE --NAME_PI = '马敬' and NAME like '胰岛素%';
+  DE.PK_PV = 'd2b4ba328af742c49932b65593f3bd7a' AND
+      --CODE_DE ='1904090026' and
+      NAME_DECATE = '普通处方';
+
+
+
+ --查询领药单
+SELECT
+--   CODE_APPLY,
+--   FLAG_SELF,
+--   apply.EU_DIRECT,
+--   apply.FLAG_FINISH, --完成标志,部分发放这个也是为0
+--   EU_PRINT,
+--   EU_STATUS, --0申请,1发放,9取消
+  NAME,CODE
+FROM EX_PD_APPLY apply
+  INNER JOIN EX_PD_APPLY_DETAIL apdetail ON apdetail.PK_PDAP = apply.PK_PDAP
+  INNER JOIN PV_ENCOUNTER pv on pv.PK_PV = apdetail.PK_PV
+  --INNER JOIN BL_IP_DT cg on cg.PK_PDSTDT = apdetail.PK_PDAPDT
+  INNER JOIN BD_PD pd on pd.PK_PD = apdetail.PK_PD
+WHERE --CODE_APPLY = '1904121310';
+ NAME_PI = '郑恋贞' and PK_DEPT_DE = '72697297D860419CB0A94F6E44EE5F79';
+
+
+ --修改批号
+SELECT
+  cg.PK_CGIP,
+  NAME_CG,
+  cg.BATCH_NO
+FROM EX_PD_APPLY apply
+  INNER JOIN EX_PD_APPLY_DETAIL apdetail ON apdetail.PK_PDAP = apply.PK_PDAP
+  INNER JOIN BL_IP_DT cg ON cg.PK_PDSTDT = apdetail.PK_PDAPDT
+WHERE apply.CODE_APPLY = '1904150537';
+
+
+--查询处方单
+SELECT CODE_IP,pi.NAME_PI,cnord.* from CN_ORDER cnord
+INNER JOIN CN_PRESCRIPTION pres on pres.PK_PRES = cnord.PK_PRES
+INNER JOIN PV_ENCOUNTER pv on pv.PK_PV = cnord.PK_PV
+INNER JOIN PI_MASTER pi on pi.PK_PI = pv.PK_PI
+where PRES_NO = '1904090079';
