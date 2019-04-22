@@ -854,3 +854,10 @@ from tbpcm pcm
       --因为旧系统默认用法这3个id维护重复,所以此处过滤
        and usingst.takingmedicinetimeid != '-1' and usingst.medicineusingmethodid != '-1'
 where pcm.idleflag = 0 and pcm.pcmid != -1
+
+
+
+
+
+-----------------------------------------
+--新增的西药

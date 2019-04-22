@@ -60,8 +60,9 @@
 	create user nhis_cs identified by nhis_cs
 	default tablespace NHIS_DATA  
 	/*µÚ4²½£º¸øÓÃ»§ÊÚÓèÈ¨ÏÞ  */
-	grant connect,resource,dba to nhis;
-	grant read,write on directory DUMPDIR to system;
+	grant connect,resource,dba to nhis_gz;
+
+	grant read,write on directory DATAFILE to nhis;
 	
 	sqlplus nhis/nhis@orcl as sysdba
 	select * from dba_tablespaces

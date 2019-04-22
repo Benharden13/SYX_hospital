@@ -49,3 +49,5 @@ select
 	null CODE_STD,
 	DT_ITEMTYPE
 from 
+
+

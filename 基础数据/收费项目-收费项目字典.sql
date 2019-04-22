@@ -1,3 +1,116 @@
+/*
+收费项目由三部分组成
+	收费项目
+	材料
+	容器
+包含的内容有
+	项目名称
+	项目编码
+	单价
+	单位
+	拼音码/五笔码
+	小孩加收
+	特诊加收/分住院与门诊
+		门诊加收30%
+		住院加收300%
+	病案费用统计类别
+		该值对应新系统码表的old_id,材料默认的病案分类为22,
+	上次编码
+	患者记账类型-自费类-费别	
+		对应新系统的费用分类
+	附加收费项目
+其中有两段sql,一段为查询在用收费项目,一段为收费项目下的组套  
+	*/
+
+--患者记账类型,需要注意的是自费类,因为收费项目使用费用分类pk_itemcate是使用自费类型下收费项目对应的费别
+SELECT * from tbPatientChargeType where PatientChargeTypeName like '%自费%'
+--收费项目费别及自付比例设定 数据为患者记账类型-收费项目  收费项目-费别
+SELECT * from tbChargeItemFeeKindAndPayproportion = '86';
+
+
+
+SELECT
+	(SELECT total
+	 FROM (SELECT
+					 count(1)                                total,
+					 '6-' + cast(item.ItemID AS VARCHAR(10)) ItemID
+				 FROM tbItem item
+					 INNER JOIN tbAdditionalCorresponding ding ON ding.MainID = item.ItemID AND AppType = '6'
+					 INNER JOIN tbItem additem ON additem.ItemID = ding.AppID
+				 WHERE item.IdleFlag = '0' AND additem.IdleFlag = 0
+				 GROUP BY '6-' + cast(item.ItemID AS VARCHAR(10))) t
+	 WHERE t.ItemID = '6-' + cast(item.ItemID AS VARCHAR(10))) addtotal,
+	 '6-' + cast(item.ItemID AS VARCHAR(10)) YB_ID,
+	ItemNo                                                     ContainerNo,
+	Description                                                Description,
+	UnitPrice,Unit,
+	SpellCode,
+	WBCode,
+	AddProportion,
+	--小孩加收比例
+	SDProportion,
+	--门诊特诊加收
+	null DisPubPatientSelfPayFlag,
+	--材料项目拥有的字段,区公医先自费类型
+	null PreSelfPayFlag,
+	--材料项目拥有的字段,先自费类型
+	NewCaseChargeTypeFlag
+	--病案分类
+FROM tbItem item
+	--INNER JOIN tbAdditionalCorresponding ding on ding.
+where item.IdleFlag = 0
+UNION ALL
+--材料
+SELECT
+	NULL         addtotal,
+	rtrim('5-' + cast(material.MaterialID as VARCHAR(10))) YB_ID,
+	MaterialNo   ContainerNo,
+	MaterialName Description,
+	UnitPrice,Unit,
+	SpellCode,
+	WBCode,
+	null AddProportion,
+	--小孩加收比例
+	null SDProportion,
+	DisPubPatientSelfPayFlag,
+	--材料项目拥有的字段,区公医先自费类型
+	PreSelfPayFlag,
+--材料项目拥有的字段,先自费类型
+	'22' NewCaseChargeTypeFlag
+	--病案分类,材料默认的病案分类为22,该值对应新系统码表的old_id
+FROM tbMaterial material
+	LEFT JOIN tbChargeItemFeeKindAndPayproportion pay
+		ON SourceID = material.MaterialID AND SourceType = 5 AND PatientChargeTypeID = '95'
+	--tbchargeitemfeekindandpayproportion='95' 是旧系统中患者记账类型:材料自费类
+	inner join tbMaterialDetail detail on material.MaterialID = detail.MaterialID
+WHERE material.IdleFlag = 0
+UNION ALL
+--容器
+SELECT
+	NULL         addtotal,
+	rtrim('9-' + cast(containerid as VARCHAR(10))) YB_ID,
+	containerno                             containerno,
+	description                             description,
+	unitprice,Unit,
+	NULL                                    spellcode,
+	NULL                                    wbcode,
+	null AddProportion,
+	--小孩加收比例
+	null SDProportion,
+	null DisPubPatientSelfPayFlag,
+	--材料项目拥有的字段,区公医先自费类型
+	null PreSelfPayFlag,
+	--材料项目拥有的字段,先自费类型
+	'22' NewCaseChargeTypeFlag
+	--病案分类,材料默认的病案分类为22,该值对应新系统码表的old_id
+FROM tbcontainer con
+	LEFT JOIN tbchargeitemfeekindandpayproportion pay
+		ON sourceid = con.containerid AND sourcetype = 9 AND patientchargetypeid = '102'
+--tbchargeitemfeekindandpayproportion='102' 是旧系统中患者记账类型:标本自费类
+WHERE idleflag = 0
+
+
+
 --收费项目的对照关系
 ------------------------------------------------------------
 --------------旧系统医嘱对应的收费项目
@@ -125,114 +238,3 @@ FROM
 			INNER JOIN tbItem item ON item.ItemID = match.SourceID
 		WHERE item.IdleFlag = 0 AND itemset.IdleFlag = 0
 	) t
-
-
-
---------------------------------------------------------------
----------------------------------------------------------------------
---新增的医嘱-收费项目对照关系
---insert into BD_ORD_ITEM
-select
-	replace(sys_guid(), '-', '') PK_ORDITEM,
-	'a41476368e2943f48c32d0cb1179dab8' PK_ORG,
-	PK_ORD,
-	--bd_ord的主键
-	PK_ITEM,
-	--bd_item,bd_pd的主键
-	QUAN,
-	'0' SORTNO,
-	--序号,没有要求需要正确
-	'ben0404' CREATOR,
-	--创建者,建议每次导入使用该字段进行区分
-	sysdate CREATE_TIME,
-	null MODIFIER,
-	'0' DEL_FLAG,
-	null TS,
-	null FLAG_OPT,
-	FLAG_PD,
-	--药品标志,0为收费项目,1为药品,----旧系统TYPE1,2,3为药品,
-	FLAG_UNION,
-	--合并标志
-	null OLD_ID
-from (
---收费项目的对照关系
---新增数据
-SELECT ORDNO,DESCRIPTION,ITEMNO,ADDNAME,new.QUAN, case when  APPTYPE = 1 then '1' ELSE '0' end FLAG_PD,ISMERGERECEIPTFLAG FLAG_UNION,PK_ORD,PK_ITEM,ordname,new.itemname  from
-(SELECT
-  ord.YB_ID ORD_ID,
-  item.YB_ID,
-  QUAN,
-  PK_ORDITEM,ord.NAME,item.NAME itemname,FLAG_UNION
-FROM BD_ORD_ITEM orditem
-  INNER JOIN BD_ORD ord ON ord.PK_ORD = orditem.PK_ORD
-  INNER JOIN BD_ITEM item ON item.PK_ITEM = orditem.PK_ITEM AND orditem.FLAG_PD = 0 --药品标志,决定着使用什么表进行关联
-                             and ord.DEL_FLAG = 0 and item.DEL_FLAG = 0
-UNION ALL
-SELECT
-  ord.YB_ID ORD_ID,
-  OLD_YB_ID  YB_ID,
-  QUAN,
-  PK_ORDITEM,ord.NAME,item.NAME,FLAG_UNION
-FROM BD_ORD_ITEM orditem
-  INNER JOIN BD_ORD ord ON ord.PK_ORD = orditem.PK_ORD
-  INNER JOIN BD_PD item ON item.PK_PD = orditem.PK_ITEM AND orditem.FLAG_PD = 1 and ord.DEL_FLAG = 0 and item.DEL_FLAG = 0) old
---新系统的数据,需要进行对比更新
-RIGHT JOIN (SELECT aitem.*,ord.DEL_FLAG,PK_ORD,PK_ITEM,ord.NAME ordname,item.NAME itemname from A_BD_ORD_ITEM aitem
-  INNER JOIN BD_ORD ord on ord.YB_ID = ORD_ID
-  INNER JOIN BD_ITEM item on item.YB_ID = aitem.YB_ID and APPTYPE <> 1
-  UNION ALL
-  SELECT aitem.*,ord.DEL_FLAG,PK_ORD,PK_PD, ord.NAME ordname,item.NAME itemname from A_BD_ORD_ITEM aitem
-  INNER JOIN BD_ORD ord on ord.YB_ID = ORD_ID
-  INNER JOIN BD_PD item on item.OLD_YB_ID = aitem.YB_ID and APPTYPE =1
-           ) new on new.ORD_ID = old.ORD_ID and new.YB_ID = old.YB_ID and new.QUAN = old.QUAN and ISMERGERECEIPTFLAG = FLAG_UNION
-where NAME is null and DEL_FLAG = 0
-      and new.QUAN <> 0 --旧系统有数据维护错误,数量为0,需要过滤;
-);
-
-
-
---------------------
-
---删除医嘱-收费项目对照关系
---UPDATE BD_ORD_ITEM
---SET DEL_FLAG = '1',
-MODIFIER = 'ben0404'  --创建者,建议每次导入使用该字段进行区分
---where PK_ORDITEM in (
-SELECT PK_ORDITEM
-  FROM
-    (SELECT
-       ord.YB_ID ORD_ID,
-       item.YB_ID,
-       QUAN,
-       PK_ORDITEM,
-       ord.NAME,
-       item.NAME itemname,
-       FLAG_UNION
-     FROM BD_ORD_ITEM orditem
-       INNER JOIN BD_ORD ord ON ord.PK_ORD = orditem.PK_ORD
-       INNER JOIN BD_ITEM item ON item.PK_ITEM = orditem.PK_ITEM AND orditem.FLAG_PD = 0 --药品标志,决定着使用什么表进行关联
-                                  AND ord.DEL_FLAG = 0 AND item.DEL_FLAG = 0 and orditem.DEL_FLAG = 0
-     UNION ALL
-     SELECT
-       ord.YB_ID ORD_ID,
-       OLD_YB_ID YB_ID,
-       QUAN,
-       PK_ORDITEM,
-       ord.NAME,
-       item.NAME,
-       FLAG_UNION
-     FROM BD_ORD_ITEM orditem
-       INNER JOIN BD_ORD ord ON ord.PK_ORD = orditem.PK_ORD
-       INNER JOIN BD_PD item
-         ON item.PK_PD = orditem.PK_ITEM AND orditem.FLAG_PD = 1 AND ord.DEL_FLAG = 0 AND item.DEL_FLAG = 0 and orditem.DEL_FLAG = 0) old
-    --新系统的数据,需要进行对比更新
-    LEFT JOIN (SELECT
-                 aitem.*,
-                 DEL_FLAG
-               FROM A_BD_ORD_ITEM aitem
-                 INNER JOIN BD_ORD ord ON ord.YB_ID = ORD_ID) new
-      ON new.ORD_ID = old.ORD_ID AND new.YB_ID = old.YB_ID AND new.QUAN = old.QUAN AND ISMERGERECEIPTFLAG = FLAG_UNION
-  WHERE DESCRIPTION IS NULL
-);
-
-
