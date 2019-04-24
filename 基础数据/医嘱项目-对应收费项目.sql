@@ -130,109 +130,198 @@ FROM
 
 --------------------------------------------------------------
 ---------------------------------------------------------------------
---新增的医嘱-收费项目对照关系
+/*
+	新增医嘱与收费项目对照关系
+*/
+
 --insert into BD_ORD_ITEM
 select
 	replace(sys_guid(), '-', '') PK_ORDITEM,
 	'a41476368e2943f48c32d0cb1179dab8' PK_ORG,
 	PK_ORD,
-	--bd_ord的主键
 	PK_ITEM,
-	--bd_item,bd_pd的主键
 	QUAN,
 	'0' SORTNO,
-	--序号,没有要求需要正确
-	'ben0404' CREATOR,
-	--创建者,建议每次导入使用该字段进行区分
+	'ben04231717' CREATOR,
 	sysdate CREATE_TIME,
 	null MODIFIER,
 	'0' DEL_FLAG,
 	null TS,
 	null FLAG_OPT,
 	FLAG_PD,
-	--药品标志,0为收费项目,1为药品,----旧系统TYPE1,2,3为药品,
-	FLAG_UNION,
-	--合并标志
+	FLAG_UNION,  --默认不合并
 	null OLD_ID
-from (
---收费项目的对照关系
---新增数据
-SELECT ORDNO,DESCRIPTION,ITEMNO,ADDNAME,new.QUAN, case when  APPTYPE = 1 then '1' ELSE '0' end FLAG_PD,ISMERGERECEIPTFLAG FLAG_UNION,PK_ORD,PK_ITEM,ordname,new.itemname  from
-(SELECT
-  ord.YB_ID ORD_ID,
-  item.YB_ID,
-  QUAN,
-  PK_ORDITEM,ord.NAME,item.NAME itemname,FLAG_UNION
-FROM BD_ORD_ITEM orditem
-  INNER JOIN BD_ORD ord ON ord.PK_ORD = orditem.PK_ORD
-  INNER JOIN BD_ITEM item ON item.PK_ITEM = orditem.PK_ITEM AND orditem.FLAG_PD = 0 --药品标志,决定着使用什么表进行关联
-                             and ord.DEL_FLAG = 0 and item.DEL_FLAG = 0
-UNION ALL
-SELECT
-  ord.YB_ID ORD_ID,
-  OLD_YB_ID  YB_ID,
-  QUAN,
-  PK_ORDITEM,ord.NAME,item.NAME,FLAG_UNION
-FROM BD_ORD_ITEM orditem
-  INNER JOIN BD_ORD ord ON ord.PK_ORD = orditem.PK_ORD
-  INNER JOIN BD_PD item ON item.PK_PD = orditem.PK_ITEM AND orditem.FLAG_PD = 1 and ord.DEL_FLAG = 0 and item.DEL_FLAG = 0) old
---新系统的数据,需要进行对比更新
-RIGHT JOIN (SELECT aitem.*,ord.DEL_FLAG,PK_ORD,PK_ITEM,ord.NAME ordname,item.NAME itemname from A_BD_ORD_ITEM aitem
-  INNER JOIN BD_ORD ord on ord.YB_ID = ORD_ID
-  INNER JOIN BD_ITEM item on item.YB_ID = aitem.YB_ID and APPTYPE <> 1
-  UNION ALL
-  SELECT aitem.*,ord.DEL_FLAG,PK_ORD,PK_PD, ord.NAME ordname,item.NAME itemname from A_BD_ORD_ITEM aitem
-  INNER JOIN BD_ORD ord on ord.YB_ID = ORD_ID
-  INNER JOIN BD_PD item on item.OLD_YB_ID = aitem.YB_ID and APPTYPE =1
-           ) new on new.ORD_ID = old.ORD_ID and new.YB_ID = old.YB_ID and new.QUAN = old.QUAN and ISMERGERECEIPTFLAG = FLAG_UNION
-where NAME is null and DEL_FLAG = 0
-      and new.QUAN <> 0 --旧系统有数据维护错误,数量为0,需要过滤;
+from (SELECT old.*
+      FROM
+      --旧系统的数据表
+        (SELECT *
+         FROM
+           (SELECT
+              PK_ORD,
+              PK_ITEM,
+              QUAN,
+              '0'                FLAG_PD,
+              ISMERGERECEIPTFLAG FLAG_UNION,
+              ORD_ID,
+              DESCRIPTION,
+              aitem.YB_ID,
+              ITEMNO,
+              ADDNAME
+            FROM A_BD_ORD_ITEM aitem
+              INNER JOIN BD_ORD ord ON ord.YB_ID = aitem.ORD_ID
+              INNER JOIN BD_ITEM item ON item.YB_ID = aitem.YB_ID and APPTYPE != '1'
+            UNION ALL
+            SELECT
+              PK_ORD,
+              PK_PD,
+              QUAN,
+              '1'                FLAG_PD,
+              ISMERGERECEIPTFLAG FLAG_UNION,
+              ORD_ID,
+              DESCRIPTION,
+              aitem.YB_ID,
+              ITEMNO,
+              ADDNAME
+            FROM A_BD_ORD_ITEM aitem
+              INNER JOIN BD_ORD ord ON ord.YB_ID = aitem.ORD_ID
+              INNER JOIN BD_PD item ON item.OLD_YB_ID = aitem.YB_ID and APPTYPE = '1')
+         ORDER BY PK_ORD, PK_ITEM ASC) old
+        --新系统的数据表,由收费项目与药品组成
+        LEFT JOIN (SELECT *
+                   FROM
+                     (SELECT
+                        AITEM.PK_ORD,
+                        AITEM.PK_ITEM,
+                        ORD.CODE  ORDCODE,
+                        ORD.NAME  ORDNAME,
+                        ITEM.CODE ITEMCODE,
+                        ITEM.NAME ITEMNAME,
+                        AITEM.QUAN,
+                        AITEM.FLAG_PD,
+                        FLAG_UNION
+                      FROM BD_ORD_ITEM AITEM
+                        INNER JOIN BD_ORD ORD ON ORD.PK_ORD = AITEM.PK_ORD
+                        --AND ORD.DEL_FLAG = 0
+                        INNER JOIN BD_ITEM ITEM
+                          ON ITEM.PK_ITEM = AITEM.PK_ITEM AND AITEM.FLAG_PD = 0  --and AITEM.DEL_FLAG = 0
+                      --FLAG_PD=0  表示为收费项目
+                      UNION ALL
+                      SELECT
+                        AITEM.PK_ORD,
+                        AITEM.PK_ITEM,
+                        ORD.CODE  ORDCODE,
+                        ORD.NAME  ORDNAME,
+                        ITEM.CODE ITEMCODE,
+                        ITEM.NAME ITEMNAME,
+                        QUAN,
+                        AITEM.FLAG_PD,
+                        FLAG_UNION
+                      FROM BD_ORD_ITEM AITEM
+                        INNER JOIN BD_ORD ORD ON ORD.PK_ORD = AITEM.PK_ORD
+                        --AND ORD.DEL_FLAG = 0
+                        INNER JOIN BD_PD ITEM
+                          ON ITEM.PK_PD = AITEM.PK_ITEM AND AITEM.FLAG_PD = 1  --and AITEM.DEL_FLAG = 0
+                       --FLAG_PD=0 表示为药品
+                     )
+                   ORDER BY PK_ORD, PK_ITEM ASC) NEW
+
+          ON old.PK_ORD = new.PK_ORD AND old.PK_ITEM = new.PK_ITEM
+             AND old.FLAG_PD = new.FLAG_PD AND old.FLAG_UNION = new.FLAG_UNION
+             --AND cast(old.QUAN as VARCHAR2(10)) = cast(new.QUAN as VARCHAR2(10))
+      WHERE new.QUAN IS NULL AND
+            OLD.QUAN > 0
+            --数量不能为0
 );
 
 
 
 --------------------
 
---删除医嘱-收费项目对照关系
---UPDATE BD_ORD_ITEM
---SET DEL_FLAG = '1',
-MODIFIER = 'ben0404'  --创建者,建议每次导入使用该字段进行区分
---where PK_ORDITEM in (
-SELECT PK_ORDITEM
-  FROM
-    (SELECT
-       ord.YB_ID ORD_ID,
-       item.YB_ID,
-       QUAN,
-       PK_ORDITEM,
-       ord.NAME,
-       item.NAME itemname,
-       FLAG_UNION
-     FROM BD_ORD_ITEM orditem
-       INNER JOIN BD_ORD ord ON ord.PK_ORD = orditem.PK_ORD
-       INNER JOIN BD_ITEM item ON item.PK_ITEM = orditem.PK_ITEM AND orditem.FLAG_PD = 0 --药品标志,决定着使用什么表进行关联
-                                  AND ord.DEL_FLAG = 0 AND item.DEL_FLAG = 0 and orditem.DEL_FLAG = 0
-     UNION ALL
-     SELECT
-       ord.YB_ID ORD_ID,
-       OLD_YB_ID YB_ID,
-       QUAN,
-       PK_ORDITEM,
-       ord.NAME,
-       item.NAME,
-       FLAG_UNION
-     FROM BD_ORD_ITEM orditem
-       INNER JOIN BD_ORD ord ON ord.PK_ORD = orditem.PK_ORD
-       INNER JOIN BD_PD item
-         ON item.PK_PD = orditem.PK_ITEM AND orditem.FLAG_PD = 1 AND ord.DEL_FLAG = 0 AND item.DEL_FLAG = 0 and orditem.DEL_FLAG = 0) old
-    --新系统的数据,需要进行对比更新
-    LEFT JOIN (SELECT
-                 aitem.*,
-                 DEL_FLAG
-               FROM A_BD_ORD_ITEM aitem
-                 INNER JOIN BD_ORD ord ON ord.YB_ID = ORD_ID) new
-      ON new.ORD_ID = old.ORD_ID AND new.YB_ID = old.YB_ID AND new.QUAN = old.QUAN AND ISMERGERECEIPTFLAG = FLAG_UNION
-  WHERE DESCRIPTION IS NULL
-);
+/*
+	删除医嘱与收费项目对照关系
+*/
 
+--删除
+SELECT *
+FROM
+  (
+  --收费项目
+  SELECT *
+   FROM
+     (SELECT
+        PK_ORD,
+        PK_ITEM,
+        QUAN,
+        '0' FLAG_PD,
+        ISMERGERECEIPTFLAG FLAG_UNION,
+        ORD_ID,
+        DESCRIPTION,
+        AITEM.YB_ID,
+        ITEMNO,
+        ADDNAME
+      FROM A_BD_ORD_ITEM AITEM
+        INNER JOIN BD_ORD ORD ON ORD.YB_ID = AITEM.ORD_ID
+        --APPTYPE != '1' 为非药品
+        INNER JOIN BD_ITEM ITEM ON ITEM.YB_ID = AITEM.YB_ID and APPTYPE != '1'
+      UNION ALL
+      --药品
+      SELECT
+        PK_ORD,
+        PK_PD,
+        QUAN,
+        '1'                FLAG_PD,
+        ISMERGERECEIPTFLAG FLAG_UNION,
+        ORD_ID,
+        DESCRIPTION,
+        AITEM.YB_ID,
+        ITEMNO,
+        ADDNAME
+      FROM A_BD_ORD_ITEM AITEM
+        INNER JOIN BD_ORD ORD ON ORD.YB_ID = AITEM.ORD_ID
+        --APPTYPE != '1' 为非药品
+        INNER JOIN BD_PD ITEM ON ITEM.OLD_YB_ID = AITEM.YB_ID and APPTYPE = '1')
+   ORDER BY PK_ORD, PK_ITEM ASC) OLD
+  --旧系统的数据表
+  RIGHT JOIN (SELECT *
+              FROM
+                (SELECT
+                   PK_ORDITEM,
+                   AITEM.PK_ORD,
+                   AITEM.PK_ITEM,
+                   ORD.YB_ID ordYBID,
+                   ORD.CODE  ORDCODE,
+                   ORD.NAME  ORDNAME,
+                   ITEM.CODE ITEMCODE,
+                   ITEM.NAME ITEMNAME,
+                   QUAN,
+                   AITEM.FLAG_PD,
+                   FLAG_UNION
+                 FROM BD_ORD_ITEM AITEM
+                   INNER JOIN BD_ORD ORD ON ORD.PK_ORD = AITEM.PK_ORD AND ORD.DEL_FLAG = 0
+                   INNER JOIN BD_ITEM ITEM ON ITEM.PK_ITEM = AITEM.PK_ITEM AND AITEM.FLAG_PD = 0 and AITEM.DEL_FLAG = 0
+                 --FLAG_PD=0  表示为收费项目
+                 UNION ALL
+                 SELECT
+                   PK_ORDITEM,
+                   AITEM.PK_ORD,
+                   AITEM.PK_ITEM,
+                   ORD.YB_ID ordYBID,
+                   ORD.CODE  ORDCODE,
+                   ORD.NAME  ORDNAME,
+                   ITEM.CODE ITEMCODE,
+                   ITEM.NAME ITEMNAME,
+                   QUAN,
+                   AITEM.FLAG_PD,
+                   FLAG_UNION
+                 FROM BD_ORD_ITEM AITEM
+                   INNER JOIN BD_ORD ORD ON ORD.PK_ORD = AITEM.PK_ORD AND ORD.DEL_FLAG = 0
+                   --对应关系中的药品标志必须为1
+                   INNER JOIN BD_PD ITEM ON ITEM.PK_PD = AITEM.PK_ITEM AND AITEM.FLAG_PD = 1 and AITEM.DEL_FLAG = 0
 
+                  --FLAG_PD=0 表示为药品
+                )
+              ORDER BY PK_ORD, PK_ITEM ASC) NEW
+  --新系统的数据表
+    ON OLD.PK_ORD = NEW.PK_ORD AND OLD.PK_ITEM = NEW.PK_ITEM
+       AND OLD.FLAG_PD = NEW.FLAG_PD AND OLD.FLAG_UNION = NEW.FLAG_UNION AND OLD.QUAN = NEW.QUAN
+WHERE OLD.QUAN IS NULL;

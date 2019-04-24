@@ -1,5 +1,12 @@
+-------------------------------------
 /*
-   旧系统UsingScopeFlag:
+	医嘱组成
+		收费项目(tbitem)
+			普通医嘱
+			检查医嘱
+		检验项目(tbitemset)
+			使用范围字段
+				旧系统UsingScopeFlag:
 					  WHEN 1 THEN '门诊'
                       WHEN 2 THEN '住院'
                       WHEN 4 THEN '技诊'
@@ -25,8 +32,16 @@
                       WHEN 40 THEN '检验、体检'
                       WHEN 62 THEN '住院、技诊、检验、库存、体检'
                       WHEN 48 THEN '库存、体检'
-                      WHEN 35 THEN '门诊、住院、体检'*/
+                      WHEN 35 THEN '门诊、住院、体检'
 
+*/
+
+   					
+---------------------------------------------
+/*
+	医嘱项目
+
+*/
 --检验项目
 select
 	'1-' + cast(ItemSetID as varchar(10)) YB_ID,
@@ -126,3 +141,25 @@ FROM tbcontainer con
 		ON sourceid = con.containerid AND sourcetype = 9 AND patientchargetypeid = '102'
 --tbchargeitemfeekindandpayproportion='102' 是旧系统中患者记账类型:标本自费类
 WHERE idleflag = 0;
+
+
+
+
+------------------------------
+/*
+	检查医嘱项目
+		执行科室
+		电子单
+*/
+
+--执行科室与电子单 检查医嘱项目
+SELECT f.DepartmentName , a.Description ,
+c.ItemNo , c.Description , h.Description
+FROM tbTDRequestModel a
+INNER JOIN tbTDRequestModelItemMatch b ON a.TDRequestModelID = b.TDRequestModelID
+INNER JOIN tbItem c ON b.ItemID = c.ItemID
+LEFT JOIN tbDepartment f ON a.ExamineDepartmentID = f.DepartmentID
+LEFT JOIN CPR.dbo.tbFormConfigure g ON g.RelationID = b.TDRequestModelID
+LEFT JOIN CPR.dbo.tbForm h ON g.FormID = h.FormID
+where a.TDRequestModelID IN (SELECT SourceID FROM tbAssort where AssortType = 8304)
+ORDER BY a.Description , c.Description;
