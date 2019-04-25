@@ -1,5 +1,5 @@
 --查询各个科室/药房/库房的药品清单数量
-SELECT DEPARTMENTNAME,DEPARTMENTID,count(1) FROM A_BD_PD_STORE GROUP BY  DEPARTMENTNAME,DEPARTMENTID
+--SELECT DEPARTMENTNAME,DEPARTMENTID,count(1) FROM A_BD_PD_STORE GROUP BY  DEPARTMENTNAME,DEPARTMENTID
 
 --该脚本用于生产仓库物品
 insert into BD_PD_STORE
@@ -41,32 +41,6 @@ where DEPARTMENTID in ('1604','1809','2101','1871','2408','2055','1870','1674','
 
 
 
-
-
---需要停止的药房药品字典
-SELECT PK_PDSTORE,store.FLAG_STOP
-  --,store.NAME,NAME_DEPT,astore.*
-from
-  (SELECT PK_PDSTORE,dept.PK_DEPT,NAME,NAME_DEPT,pd.PK_PD,store.FLAG_STOP from BD_PD_STORE store
- INNER JOIN BD_OU_DEPT dept on dept.PK_DEPT = store.PK_DEPT
- INNER JOIN BD_PD pd on pd.PK_PD = store.PK_PD
-where dept.OLD_ID in ('1604','1809','2101','1871','2408','2055','1870','1674','1810','1599','2854','1601','2546','2544')
---这些是所有药房的id '南院中心药房','南院中药房','中心药房','门诊西药房','急诊药房','保健药房','特诊中心药房','南院药房','门诊中药房','南院西药房','门诊自助药房','南院急诊药房',
-  and store.FLAG_STOP = 0 and store.DEL_FLAG = 0 and NAME_DEPT in ('南院中心药房','中心药房')
-  --必须是仓库物品未停止的
-  ) store
-left JOIN (SELECT adept.PK_DEPT,pd.PK_PD,NAME,astore.* from A_BD_PD_STORE astore
-  INNER JOIN BD_OU_DEPT adept on adept.OLD_ID = DEPARTMENTID
-  INNER JOIN BD_PD pd on pd.OLD_YB_ID = YB_ID where DEPARTMENTID in ('1604','1809','2101','1871','2408','2055','1870','1674','1810','1599','2854','1601','2546','2544')
-    --这些是所有药房的id '南院中心药房','南院中药房','中心药房','门诊西药房','急诊药房','保健药房','特诊中心药房','南院药房','门诊中药房','南院西药房','门诊自助药房','南院急诊药房',
-      and USINGSCOPEFLAG <> 0) astore ON astore.PK_DEPT = store.PK_DEPT and astore.PK_PD = store.PK_PD
-where astore.PK_PD is NULL or 
-      --左连接后匹配不到数据,证明旧系统没有,需要删除
-      ((store.NAME not LIKE '%(自%' AND store.NAME not LIKE '%（自%' ) and STOCK = 0);
-      --库存为0,而不不是自备药需要删除        
-
-
-
 ---检查对照关系,保证OLD_ID,OLD_YB_ID,OLD_CODE唯一而且不为空
 SELECT PK_PD,code,name,SPEC,OLD_YB_ID,OLD_ID,OLD_CODE,DEL_FLAG from BD_PD 
 where OLD_YB_ID is null or OLD_ID is null or OLD_CODE is null or OLD_CODE like '%-%' or OLD_ID like '%-%'  or OLD_YB_ID NOT like '%-%';
@@ -74,21 +48,22 @@ SELECT PK_PD,code,name,SPEC,OLD_YB_ID,OLD_ID,OLD_CODE,DEL_FLAG,FLAG_STOP,PRICE,C
          (SELECT OLD_YB_ID from BD_PD  GROUP BY OLD_YB_ID HAVING count(1) > 1);
 
 
-
-
---仓库库存物品表
-SELECT PK_DEPT,astore.* from A_BD_PD_STORE astore
-  INNER JOIN BD_OU_DEPT adept on adept.OLD_ID = DEPARTMENTID
-  --INNER JOIN
-where DEPARTMENTID in ('2051','2579','2062','2485') --这些是所有药房的id '南院西药库','南院化学试剂库','南院中药库','科研麻精药品库',
-      and USINGSCOPEFLAG <> 0;
-
-SELECT * from BD_PD where CODE = '000491' or code = '06214'--24853
-SELECT * from A_BD_PD_STORE where WMNO = '06214'
-
 -------------------------------------------------------------------------------------------------------------------------------
----获取旧系统仓库物品的数据
-SELECT
+---
+/*
+	获取旧系统仓库物品的数据
+
+	  仓库物品维护
+	  usingScopeFlag  使用范围
+	    0的是不使用
+	    1=门诊使用
+	    2=住院使用
+	    3=门诊,住院使用
+	  stock 库存数量
+	    为0表示没有库存,部分7开头的药品(自购药)即使库存为0也需要在新系统进行维护
+*/
+
+with stock as (SELECT
 	c.DepartmentID                     DepartmentID,
 	c.DepartmentName                   DepartmentName,
 	'1-' + cast(B.WMID AS VARCHAR(10)) YB_ID,
@@ -104,7 +79,7 @@ FROM tWMStock A
 INNER JOIN tbWM B ON A.WMID = B.WMID
 --关联使用药房
 INNER JOIN tbDepartment c ON c.DepartmentID = A.MedicineDepartmentID
-where b.IdleFlag = 0 AND 
+where b.IdleFlag = 0 AND
 			DepartmentID <> '-1'  -- -1为根科室
 UNION ALL
 SELECT
@@ -141,5 +116,37 @@ FROM tTCMStock A
 INNER JOIN tbTCM B ON A.TCMID = B.TCMID
 --关联使用药房
 INNER JOIN tbDepartment c ON c.DepartmentID = A.MedicineDepartmentID
-where b.IdleFlag = 0 AND DepartmentID <> '-1'
+where b.IdleFlag = 0 AND DepartmentID <> '-1')
+SELECT * from stock
+  where UsingScopeFlag <> 0
+        --药房
+        AND DepartmentID in ('1604','1809','2101','1871','2408','2055','1870','1674','1810','1599','2854','1601','2546','2544')
+        --药库
+        OR  DepartmentID in ('2051','2579','2062','2485')
+order by DepartmentID,YB_ID asc
 
+
+
+/*
+	新系统的仓库物品字典
+*/
+
+SELECT
+  PK_PDSTORE,
+  dept.PK_DEPT,
+  dept.OLD_ID deptOldId,
+  NAME,
+  NAME_DEPT,
+  pd.PK_PD,
+  pd.OLD_YB_ID pdOldId,
+  store.FLAG_STOP
+FROM BD_PD_STORE store
+  INNER JOIN BD_OU_DEPT dept ON dept.PK_DEPT = store.PK_DEPT
+  INNER JOIN BD_PD pd ON pd.PK_PD = store.PK_PD
+WHERE
+      --药房药库的数据,没有停止没有删除
+      (dept.OLD_ID IN
+      ('1604', '1809', '2101', '1871', '2408', '2055', '1870', '1674', '1810', '1599', '2854', '1601', '2546', '2544')
+      OR dept.OLD_ID IN ('2051', '2579', '2062', '2485'))
+      and store.DEL_FLAG = 0 and store.FLAG_STOP = 0
+order by dept.OLD_ID, pd.OLD_YB_ID asc
